@@ -1,0 +1,325 @@
+pipeline {
+   agent any
+
+   tools {
+      maven "Maven3.6"
+   }
+   environment {
+       nuget = "C:\\Program Files\\Nuget\\nuget.exe"
+       msbuild = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\MSBuild\\Current\\Bin\\MSBuild.exe"
+	   //dotnet = "C:\\Program Files\\dotnet\\dotnet.exe"
+       mstest = "C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\TestAgent\\Common7\\IDE\\MSTest.exe"
+	   sonarscanner = "C:\\Program Files\\sonar-scanner-msbuild-4.10\\SonarScanner.MSBuild.exe"
+   }
+   stages {
+
+	  stage('Project: Read Config') {
+		steps {
+			script {
+				try {
+					def records = readCSV(file: 'C:\\Users\\devopsuser\\Documents\\JobConfig.csv')
+					println(records[2][0])
+					env.ProjectType = records[2][0]
+					println(records[2][1])
+					env.pm_branch = records[2][1]
+					println(records[2][2])
+					env.pm_giturl = records[2][2]
+					if (env.ProjectType == "Maven") {
+					   	println(records[2][3])
+					    env.pm_artifactid = records[2][3] 
+					}
+                    else if (env.ProjectType == "ASP") {
+                        println(records[2][3])
+					    env.pm_solutionfile = records[2][3]
+                    }
+					if (env.ProjectType == "Maven") {
+						println(records[2][4])
+						env.pm_artifactversion = records[2][4]
+					}
+					else if (env.ProjectType == "ASP") {
+						println(records[2][4])
+						env.pm_appversion = records[2][4]
+					}
+					if (env.ProjectType == "Maven") {
+						println(records[2][5])
+						env.pm_artifacttype = records[2][5]
+					}
+					else if (env.ProjectType == "ASP") {
+						println(records[2][5])
+						env.pm_projecttype = records[2][5]
+					}
+					println(records[2][6])
+					env.pm_nexusurl = records[2][6]
+					println(records[2][7])
+					env.pm_nexusrepo = records[2][7]
+					println(records[2][8])
+					env.pm_tomcaturl = records[2][8]
+					println(records[2][9])
+					env.pm_tomcatuserid = records[2][9]
+					println(records[2][10])
+					env.pm_tomcatpassword = records[2][10]
+				}
+				catch(Exception e3) {
+					echo "***Failed reading job configuration from csv file***"
+					throw new Exception()
+				}
+			}
+		}
+	  }
+	
+	  stage('Project: Code Checkout') {
+		steps {
+			script {
+				try {
+					checkout([$class: 'GitSCM', 
+					branches: [[name: pm_branch]], 
+					doGenerateSubmoduleConfigurations: false, 
+					extensions: [], submoduleCfg: [], 
+					userRemoteConfigs: [[credentialsId: 'JenkinsGit', url: pm_giturl]]
+					])
+				}
+				catch(Exception e1) {
+					echo "***Git Checkout Failed due to some Issue! Reach out to Devops Team***"
+					throw new Exception()
+				}
+			}
+		}
+	  }
+
+	  stage('Add SonarQube for MSBuild') {
+		steps {
+			echo "${sonarscanner}"
+// 			bat "\"${sonarscanner}\" begin /k:ASP /n:ASP /v:build"
+		}
+	  }
+	  
+	  stage('Project: Build') {
+		steps {
+			script {
+					if (env.ProjectType == 'Maven') {
+					    println("***Found Maven Type Application, Configuring pipeline for Maven Application***")
+						bat "mvn clean compile"
+					}
+					else if (env.ProjectType == 'ASP') {
+					    println("***Found ASP.NET Type Application, Configuring pipeline for ASP.NET Application***")
+						bat "\"${nuget}\" restore ${env.pm_solutionfile}"
+						bat "\"${msbuild}\" ${env.pm_solutionfile} /t:build /p:Configuration=Release"
+					}
+					else {
+					    println("Found Different type project in CSV configured, please reach out to devops team at devops@gds.ey.com")
+					}
+			}
+		}
+	  } 
+	  stage('Project: Sonarqube Analysis') {
+		steps {
+		    echo "${sonarscanner}"
+ 			script {
+				if (env.ProjectType == 'Maven') {
+					bat "mvn sonar:sonar"
+				}
+				else if (env.ProjectType == 'ASP') {
+				    echo "${sonarscanner}"
+				// 	bat "\"${sonarscanner}\" end"
+				}
+ 			}
+ 		}
+ 	 }
+	  stage("Project: Code Coverage") {
+		steps {
+			script {
+					if (env.ProjectType == 'Maven') {
+						try {
+							jacoco classPattern: '**/target/classes', 
+							deltaBranchCoverage: '5', 
+							deltaClassCoverage: '5', 
+							deltaComplexityCoverage: '5', 
+							deltaLineCoverage: '5', 
+							deltaMethodCoverage: '5', 
+							maximumBranchCoverage: '5', 
+							maximumClassCoverage: '5', 
+							maximumComplexityCoverage: '5', 
+							maximumLineCoverage: '5', 
+							maximumMethodCoverage: '5', 
+							minimumBranchCoverage: '5', 
+							minimumClassCoverage: '5', 
+							minimumComplexityCoverage: '5', 
+							minimumLineCoverage: '5', 
+							minimumMethodCoverage: '5'   
+						}
+						catch(Exception e1) {
+							echo "Jacoco Code Coverage Analysis Failed"
+							throw new Exception()
+						}
+					}
+					else if (env.ProjectType == 'ASP') {
+						println("Skipped Jacoco as not valid stage for ${env.ProjectType} application")
+					}
+				}
+			}			  
+	  }
+
+	  stage('Project: Unit Test') {
+		steps {
+			script {
+				if (env.ProjectType == "Maven")
+				{
+					try {
+						bat "mvn clean test"
+					}
+					catch(Exception e1) {
+						echo "Maven Tests Failed"
+						
+						def testIssue = [fields: [project: [key: 'GUES'],
+													summary: 'Maven Tests Failed',
+													description: 'Maven Tests Failed',
+													issuetype: [name: 'Bug']]]
+						
+						response = jiraNewIssue issue: testIssue, site: 'JIRA T'
+						
+						echo response.successful.toString()
+						echo response.data.toString()	
+						throw new Exception()
+					}
+				}
+				else if (env.ProjectType == "ASP")
+				{
+                      dir('UnitTestProject1/bin/Release')
+                        {
+                            bat "\"${mstest}\" /testcontainer:UnitTestProject1.dll /resultsfile:testResults.trx"
+					        println("Completed Unit Test Case run for ASP.NET Application")
+                        }
+                        // step([$class: 'MSTestPublisher', resultsfile:"**/*.trx", failOnError: true, keepLongStdio: true])
+				}
+			}
+		}
+	  }
+	  
+	  stage('Project: Package') {
+		steps {
+			script {
+				if (env.ProjectType == "Maven")
+				{
+					try {
+						bat "mvn clean package"
+					}
+					catch(Exception e1) {
+						echo "Maven Package Failed"
+
+						def testIssue = [fields: [project: [key: 'GUES'],
+													summary: 'Maven Package Failed',
+													description: 'Maven Package Failed',
+													issuetype: [name: 'Bug']]]
+						
+						response = jiraNewIssue issue: testIssue, site: 'JIRA'
+						
+						echo response.successful.toString()
+						echo response.data.toString()
+						throw new Exception()
+					}
+				}
+				else if (env.ProjectType == "ASP")
+				{
+					try {
+						bat "\"${nuget}\" pack Package.nuspec"
+						println("Packaged Application Succefully")
+					}
+					catch(Exception e1) {
+						echo "Failed to create Application Nuget Package"
+						throw new Exception()
+					}
+				}
+			}
+		}
+	  }
+
+	  stage("Project: Nexus Upload") {
+		 steps {
+			script {
+				if (env.ProjectType == "Maven") {
+					try {
+						env.filepath = ('\\target\\' + pm_artifactid + '-' + pm_artifactversion + '.' + pm_artifacttype)
+						println(filepath)
+					
+						artifactname = (pm_artifactid + '_0.0.' + BUILD_NUMBER)
+						println(artifactname)
+					
+						nexusArtifactUploader artifacts: [[artifactId: pm_artifactid, classifier: '', file: filepath, type: pm_artifacttype]], credentialsId: 'SonarNexus', groupId: pm_artifactid, nexusUrl: pm_nexusurl, nexusVersion: 'nexus3', protocol: 'http', repository: pm_nexusrepo, version: artifactname
+					}
+					catch(Exception e1) {
+						echo "Upload to Nexus Server Failed"
+						throw new Exception()
+					}
+				}
+				else if (env.ProjectType == "ASP") {
+					try {
+						bat "\"${nuget}\" push *.nupkg 9f0c517f-353e-3b77-a251-329b503582c3 -Source http://${pm_nexusurl}/repository/${pm_nexusrepo}/"
+					}
+					catch(Exception e1) {
+						echo "Upload to Nexus Server Failed"
+						throw new Exception()
+					}	
+				}
+			}
+		}
+	  }
+	  
+	  stage("Project: Deploy") {
+		 steps {
+			script {
+				if (env.ProjectType == "Maven") {
+					try {
+						sourcepath = (pm_artifactid + '-' + pm_artifactversion + '.' + pm_artifacttype)
+						targetpath = ('C:\\' + pm_artifactid + '-' + pm_artifactversion + '.' + pm_artifacttype)
+						finaltomcaturl = (pm_tomcaturl + '/manager/text/deploy?path=/' + pm_artifactid + '^&update=true')
+										
+						bat "copy target\\%sourcepath% C:\\%targetpath%" 
+						bat "curl -v -u $pm_tomcatuserid:$pm_tomcatpassword -T $targetpath $finaltomcaturl"
+					    //bat "del $targetpath"
+					}
+					catch(Exception e1) {
+						echo "Deploy to Tomcat Server Failed"
+						throw new Exception()
+					}
+				}
+				else if (env.ProjectType == "ASP")
+				{
+					try {
+					    bat "\"${msbuild}\" ${env.pm_solutionfile} /p:DeployOnBuild=true /p:DeployDefaultTarget=WebPublish /p:WebPublishMethod=FileSystem /p:SkipInvalidConfigurations=true /t:build /p:Configuration=Release /p:Platform=\"Any CPU\" /p:DeleteExistingFiles=True /p:publishUrl=c:\\inetpub\\wwwroot"
+					    println("Status - ${env.ProjectType} Deployment is Successfull")
+					}
+					catch(Exception e1) {
+						echo "Deploy to IIS Server Failed"
+						throw new Exception()
+					}
+				}
+			}
+		}
+	  }
+
+	  stage("Project: Automation") {
+		steps {
+			script {
+				if (env.ProjectType == "Maven") {
+					try {
+						build job: 'Guestbook_Automation', propagate: true, wait: true
+					}
+					catch(Exception e1) {
+						echo "Calling Selenium Automation Job Failed"
+						throw new Exception()
+					}
+				}
+				else if (env.ProjectType == "ASP") {
+					try {
+						build job: 'ASPWebApp_Automation', propagate: true, wait: true
+					}
+					catch(Exception e1) {
+						echo "Calling Selenium Automation Job Failed"
+						throw new Exception()
+					}
+				}
+			}
+		}
+	  }
+	}
+}
