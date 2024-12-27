@@ -6,6 +6,6 @@ data "oci_identity_compartments" "all_compartment" {
 
 # Data source to get the current tenant
 data "oci_identity_tenancy" "current_tenancy" {
-    tenancy_id = "$tenancy_ocid"
+    tenancy_id = var.tenancy_ocid
 }
 

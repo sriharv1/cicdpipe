@@ -1,4 +1,4 @@
-# Variables for Oracle Cloud Infrastructure resources.
+# # Variables for Oracle Cloud Infrastructure resources.
 
 variable "tenancy_ocid" {
   type        = string
