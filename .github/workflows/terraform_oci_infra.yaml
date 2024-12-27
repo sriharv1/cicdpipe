@@ -30,8 +30,8 @@ jobs:
 
     - name: echo compartment 
       run: |
-        echo ${{ TF_VAR_compartment }}
-        echo ${{ TF_VAR_region }}
+        echo "${{ TF_VAR_compartment }}"
+        echo "${{ TF_VAR_region }}"
 
     - name: Initialize Terraform
       run: terraform init
