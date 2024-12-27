@@ -27,11 +27,7 @@ jobs:
         export TF_VAR_fingerprint="${{ secrets.TF_VAR_FINGERPRINT }}"
         export TF_VAR_region="${{ secrets.TF_VAR_region }}"
         export TF_VAR_compartment="${{ secrets.COMPARTMENT }}"
-
-    - name: echo compartment 
-      run: |
         echo "${{ TF_VAR_compartment }}"
-        echo "${{ TF_VAR_region }}"
 
     - name: Initialize Terraform
       run: terraform init
