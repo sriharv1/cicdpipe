@@ -24,8 +24,11 @@ jobs:
       uses: hashicorp/setup-terraform@v2
     
     - name: Create Private Key File
+      env:
+        TF_VAR_fingerprint: "${{ secrets.TF_VAR_FINGERPRINT }}"
       run: |
         echo "${{ secrets.PRIVATE_KEY_FILE }}" > private_key.pem
+        echo "$TF_VAR_fingerprint"
 
     # - name: Login to Oracle Cloud Infrastructure
     #   run: |
@@ -45,7 +48,7 @@ jobs:
       run: terraform init
 
     - name: Plan
-      run: terraform plan -var='tenancy_ocid="${{ env.TF_VAR_TENANCY_OCID }}"' -var='user_ocid="${{ env.TF_VAR_USER_OCID }}"' -var='fingerprint="${{ env.TF_VAR_FINGERPRINT }}"' -var='region=${{ env.region }}' -var='compartment=${{ env.compartment }}' -out=plan
+      run: terraform plan -backend-config -var='tenancy_ocid="${{ env.TF_VAR_TENANCY_OCID }}"' -var='user_ocid="${{ env.TF_VAR_USER_OCID }}"' -var='fingerprint="${{ env.TF_VAR_FINGERPRINT }}"' -var='region=${{ env.region }}' -var='compartment=${{ env.compartment }}' -out=plan
 
     - name: Apply
       run: terraform apply plan --auto-approve
