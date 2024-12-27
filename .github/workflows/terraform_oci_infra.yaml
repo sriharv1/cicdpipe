@@ -28,13 +28,10 @@ jobs:
         export TF_VAR_region="${{ secrets.TF_VAR_region }}"
         export TF_VAR_compartment="${{ secrets.COMPARTMENT }}"
 
-        # terraform login \
-        #   --hostname "https://-1.oraclecloud.com" \
-        #   --provider oci \
-        #   --user-ocid "$TF_VAR_user_ocid" \
-        #   --tenancy-ocid "$TF_VAR_tenancy_ocid" \
-        #   --fingerprint "$TF_VAR_fingerprint" \
-        #   --private-key-file "./private_key.pem"
+    - name: echo compartment 
+      run: |
+        echo $TF_VAR_compartment
+        echo $TF_VAR_region
 
     - name: Initialize Terraform
       run: terraform init
