@@ -6,6 +6,6 @@ data "oci_identity_compartments" "all_compartment" {
 
 # Data source to get the current tenant
 data "oci_identity_tenancy" "current_tenancy" {
-    tenancy_id = "ocid1.tenancy.oc1..aaaaaaaaxva6ybvrffehf32ricoahwwssq4mu4ecm2tr5552gfczt7oasfya"
+    tenancy_id = "$TF_VAR_tenancy_ocid"
 }
 
