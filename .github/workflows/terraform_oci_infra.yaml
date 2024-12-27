@@ -28,7 +28,7 @@ jobs:
         TF_VAR_fingerprint: "${{ secrets.TF_VAR_FINGERPRINT }}"
       run: |
         echo "${{ secrets.PRIVATE_KEY_FILE }}" > private_key.pem
-        echo "${{ env.TF_VAR_fingerprint }}""
+        echo "${{ env.TF_VAR_fingerprint }}"
 
     # - name: Login to Oracle Cloud Infrastructure
     #   run: |
