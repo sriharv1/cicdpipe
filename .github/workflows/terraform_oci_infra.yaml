@@ -27,13 +27,12 @@ jobs:
         export TF_VAR_fingerprint="${{ secrets.TF_VAR_FINGERPRINT }}"
         export TF_VAR_region="${{ secrets.TF_VAR_region }}"
         export TF_VAR_compartment="${{ secrets.COMPARTMENT }}"
-        echo $"TF_VAR_tenancy_ocid"
-
+        
     - name: Initialize Terraform
       run: terraform init
 
     - name: Plan
-      run: terraform plan -out=plan
+      run: terraform plan -auto-approve -var='tenancy_ocid="${{ secrets.OCI_TENANCY_OCID }}"' -var='user_ocid="${{ secrets.OCI_USER_OCID }}"' -var='fingerprint="{{ secrets.TF_VAR_FINGERPRINT }}"' -var='region="{{ secrets.TF_VAR_region }}" -var='compartment="{{ secrets.COMPARTMENT }}" -out=plan
 
     - name: Apply
       run: terraform apply -auto-approve plan
