@@ -32,7 +32,7 @@ jobs:
       run: terraform init
 
     - name: Plan
-      run: terraform plan -var='tenancy_ocid="${{ secrets.OCI_TENANCY_OCID }}"' -var='user_ocid="${{ secrets.OCI_USER_OCID }}"' -var='fingerprint="{{ secrets.TF_VAR_FINGERPRINT }}"' -var='region="{{ secrets.TF_VAR_region }}"' -var='compartment="{{ secrets.COMPARTMENT }}"' --auto-approve -out=plan
+      run: terraform plan -var='tenancy_ocid="${{ secrets.TF_VAR_TENANCY_OCID }}"' -var='user_ocid="${{ secrets.TF_VAR_USER_OCID }}"' -var='fingerprint="{{ secrets.TF_VAR_FINGERPRINT }}"' -var='region="{{ secrets.TF_VAR_REGION }}"' -var='compartment="{{ secrets.COMPARTMENT }}"' --auto-approve -out=plan
 
     - name: Apply
       run: terraform apply --auto-approve plan
