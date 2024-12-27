@@ -1,0 +1,16 @@
+# This .gitignore file is for a Terraform project.
+
+# Terraform state files
+terraform.tfstate
+terraform.tfstate.backup
+
+# Terraform plan files
+*.tfplan 
+
+# Terraform generated files
+*.tfstate.backup*
+*.tf.lock
+.terraform
+
+# Local environment variables
+.env
