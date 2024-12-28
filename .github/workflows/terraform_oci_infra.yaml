@@ -27,10 +27,11 @@ jobs:
     
     - name: Create Private Key File
       env:
-        TF_VAR_fingerprint: "${{ secrets.TF_VAR_FINGERPRINT }}"
+        TF_VAR_fingerprint: ${{ secrets.TF_VAR_FINGERPRINT }}
       run: |
-        echo "${{ env.key_file }}" > private_key.pem
-        echo "${{ env.TF_VAR_fingerprint }}"
+        echo ${{ env.key_file }} > private_key.pem
+        echo ${{ env.TF_VAR_fingerprint }}
+        cat private_key.pem
 
     # - name: Login to Oracle Cloud Infrastructure
     #   run: |
